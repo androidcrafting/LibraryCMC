@@ -3,6 +3,9 @@ import 'package:library_cmc/core/theme/app_theme.dart';
 import 'package:library_cmc/presentation/views/signup_view.dart';
 import 'package:library_cmc/presentation/views/main_navigation_wrapper.dart';
 import 'package:library_cmc/presentation/views/admin_dashboard_view.dart';
+import 'package:library_cmc/core/services/auth_service.dart';
+import 'package:library_cmc/core/config/admin_config.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 enum Role { student, admin }
 
@@ -17,6 +20,9 @@ class _LoginViewState extends State<LoginView> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   Role _selectedRole = Role.student;
+  bool _isLoading = false;
+  bool _isPasswordVisible = false;
+  final AuthService _authService = AuthService();
 
   @override
   void dispose() {
@@ -147,11 +153,18 @@ class _LoginViewState extends State<LoginView> {
                   const SizedBox(height: 10),
                   TextField(
                     controller: _passwordController,
-                    obscureText: true,
-                    decoration: const InputDecoration(
+                    obscureText: !_isPasswordVisible,
+                    decoration: InputDecoration(
                       hintText: '••••••••',
-                      prefixIcon: Icon(Icons.lock_outline, color: AppColors.primary),
-                      suffixIcon: Icon(Icons.visibility_off_outlined),
+                      prefixIcon: const Icon(Icons.lock_outline, color: AppColors.primary),
+                      suffixIcon: IconButton(
+                        icon: Icon(_isPasswordVisible ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+                        onPressed: () {
+                          setState(() {
+                            _isPasswordVisible = !_isPasswordVisible;
+                          });
+                        },
+                      ),
                       fillColor: Colors.white,
                     ),
                   ),
@@ -185,17 +198,62 @@ class _LoginViewState extends State<LoginView> {
                   ],
                 ),
                 child: ElevatedButton(
-                  onPressed: () {
-                    if (_selectedRole == Role.admin) {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (context) => const AdminDashboardView()),
+                  onPressed: _isLoading ? null : () async {
+                    setState(() => _isLoading = true);
+                    try {
+                      final email = _emailController.text.trim();
+                      final password = _passwordController.text.trim();
+
+                      if (_selectedRole == Role.admin) {
+                        // Admin hardcoded login
+                        if (email == AdminConfig.adminEmail && password == AdminConfig.adminPassword) {
+                          final prefs = await SharedPreferences.getInstance();
+                          await prefs.setBool('isAdminLoggedIn', true);
+                          
+                          if (!context.mounted) return;
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(builder: (context) => const AdminDashboardView()),
+                          );
+                        } else {
+                          throw Exception('Identifiants admin incorrects');
+                        }
+                      } else {
+                        // Student Supabase login
+                        await _authService.signIn(
+                          email: email,
+                          password: password,
+                        );
+                        
+                        if (!context.mounted) return;
+                        
+                        final role = _authService.getCurrentUserRole();
+                        
+                        if (role == 'admin') {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Attention: Ce compte est un compte administrateur.'),
+                            ),
+                          );
+                        }
+                        
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(builder: (context) => const MainNavigationWrapper()),
+                        );
+                      }
+                    } catch (e) {
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Erreur de connexion : Identifiants incorrects'),
+                          backgroundColor: AppColors.error,
+                        ),
                       );
-                    } else {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (context) => const MainNavigationWrapper()),
-                      );
+                    } finally {
+                      if (context.mounted) {
+                        setState(() => _isLoading = false);
+                      }
                     }
                   },
                   style: ElevatedButton.styleFrom(
@@ -204,7 +262,9 @@ class _LoginViewState extends State<LoginView> {
                     elevation: 0,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   ),
-                  child: const Text('Se connecter', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                  child: _isLoading 
+                      ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      : const Text('Se connecter', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
                 ),
               ),
               const SizedBox(height: 32),

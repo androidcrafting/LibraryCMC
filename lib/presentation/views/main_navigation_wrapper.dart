@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:library_cmc/core/theme/app_theme.dart';
+import 'package:library_cmc/presentation/views/profile_view.dart';
 
 class MainNavigationWrapper extends StatefulWidget {
   const MainNavigationWrapper({super.key});
@@ -14,7 +15,7 @@ class _MainNavigationWrapperState extends State<MainNavigationWrapper> {
   final List<Widget> _pages = [
     const Center(child: Text('Catalogue (En cours)')),
     const Center(child: Text('Réservations (En cours)')),
-    const Center(child: Text('Profil (En cours)')),
+    const ProfileView(),
   ];
 
   @override

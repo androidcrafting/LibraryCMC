@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:library_cmc/core/theme/app_theme.dart';
 import 'package:library_cmc/presentation/views/login_view.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AdminDashboardView extends StatelessWidget {
   const AdminDashboardView({super.key});
@@ -16,7 +17,11 @@ class AdminDashboardView extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
-            onPressed: () {
+            onPressed: () async {
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.setBool('isAdminLoggedIn', false);
+              
+              if (!context.mounted) return;
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(builder: (context) => const LoginView()),

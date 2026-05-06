@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:library_cmc/core/theme/app_theme.dart';
 import 'package:library_cmc/presentation/views/login_view.dart';
+import 'package:library_cmc/core/services/auth_service.dart';
 
 class SignupView extends StatefulWidget {
   const SignupView({super.key});
@@ -11,6 +12,21 @@ class SignupView extends StatefulWidget {
 
 class _SignupViewState extends State<SignupView> {
   Role _selectedRole = Role.student;
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _idController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  bool _isLoading = false;
+  final AuthService _authService = AuthService();
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _idController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -106,13 +122,14 @@ class _SignupViewState extends State<SignupView> {
               const SizedBox(height: 32),
               
               // Full Name field
-              const Column(
+              Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                   Text('Nom Complet', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                   SizedBox(height: 8),
+                   const Text('Nom Complet', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                   const SizedBox(height: 8),
                    TextField(
-                    decoration: InputDecoration(
+                    controller: _nameController,
+                    decoration: const InputDecoration(
                       hintText: 'Jean Dupont',
                       prefixIcon: Icon(Icons.person_outline, color: AppColors.primary),
                     ),
@@ -131,6 +148,7 @@ class _SignupViewState extends State<SignupView> {
                    ),
                    const SizedBox(height: 8),
                    TextField(
+                    controller: _idController,
                     decoration: InputDecoration(
                       hintText: _selectedRole == Role.admin ? 'ADM-XXXX' : 'CMC-2024-0000',
                       prefixIcon: const Icon(Icons.badge_outlined, color: AppColors.primary),
@@ -150,6 +168,7 @@ class _SignupViewState extends State<SignupView> {
                    ),
                    const SizedBox(height: 8),
                    TextField(
+                    controller: _emailController,
                     decoration: InputDecoration(
                       hintText: _selectedRole == Role.admin ? 'admin@cmc.cmc' : 'nom@etudiant.cmc',
                       prefixIcon: const Icon(Icons.alternate_email, color: AppColors.primary),
@@ -160,14 +179,15 @@ class _SignupViewState extends State<SignupView> {
               const SizedBox(height: 24),
               
               // Password Field (Soft Fill)
-              const Column(
+              Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                   Text('Mot de passe', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                   SizedBox(height: 8),
+                   const Text('Mot de passe', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                   const SizedBox(height: 8),
                    TextField(
+                    controller: _passwordController,
                     obscureText: true,
-                    decoration: InputDecoration(
+                    decoration: const InputDecoration(
                       hintText: '••••••••',
                       prefixIcon: Icon(Icons.lock_outline, color: AppColors.primary),
                     ),
@@ -185,21 +205,46 @@ class _SignupViewState extends State<SignupView> {
                   borderRadius: BorderRadius.circular(9999),
                 ),
                 child: ElevatedButton(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(_selectedRole == Role.admin ? 'Compte administrateur créé !' : 'Compte étudiant créé !'),
-                        backgroundColor: AppColors.success,
-                      ),
-                    );
-                    Navigator.pop(context);
+                  onPressed: _isLoading ? null : () async {
+                    setState(() => _isLoading = true);
+                    try {
+                      await _authService.signUp(
+                        email: _emailController.text.trim(),
+                        password: _passwordController.text.trim(),
+                        fullName: _nameController.text.trim(),
+                        customId: _idController.text.trim(),
+                        role: _selectedRole == Role.admin ? 'admin' : 'student',
+                      );
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(_selectedRole == Role.admin ? 'Compte administrateur créé !' : 'Compte étudiant créé !'),
+                          backgroundColor: AppColors.success,
+                        ),
+                      );
+                      Navigator.pop(context);
+                    } catch (e) {
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Erreur: ${e.toString()}'),
+                          backgroundColor: AppColors.error,
+                        ),
+                      );
+                    } finally {
+                      if (context.mounted) {
+                        setState(() => _isLoading = false);
+                      }
+                    }
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.transparent,
                     shadowColor: Colors.transparent,
                     elevation: 0,
                   ),
-                  child: const Text('S\'inscrire', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  child: _isLoading 
+                      ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      : const Text('S\'inscrire', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
                 ),
               ),
               const SizedBox(height: 32),
