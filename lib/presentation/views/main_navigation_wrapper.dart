@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:library_cmc/core/theme/app_theme.dart';
 import 'package:library_cmc/presentation/views/profile_view.dart';
+import 'package:library_cmc/presentation/views/catalog_view.dart';
+import 'package:library_cmc/presentation/views/reservations_view.dart';
 
 class MainNavigationWrapper extends StatefulWidget {
   const MainNavigationWrapper({super.key});
@@ -13,8 +15,8 @@ class _MainNavigationWrapperState extends State<MainNavigationWrapper> {
   int _selectedIndex = 0;
 
   final List<Widget> _pages = [
-    const Center(child: Text('Catalogue (En cours)')),
-    const Center(child: Text('Réservations (En cours)')),
+    const CatalogView(),
+    const ReservationsView(),
     const ProfileView(),
   ];
 
