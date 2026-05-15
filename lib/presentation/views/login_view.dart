@@ -205,8 +205,14 @@ class _LoginViewState extends State<LoginView> {
                       final password = _passwordController.text.trim();
 
                       if (_selectedRole == Role.admin) {
-                        // Admin hardcoded login
+                        // Admin hardcoded login check
                         if (email == AdminConfig.adminEmail && password == AdminConfig.adminPassword) {
+                          // Perform real Supabase sign-in for the admin to get a session
+                          await _authService.signIn(
+                            email: email,
+                            password: password,
+                          );
+
                           final prefs = await SharedPreferences.getInstance();
                           await prefs.setBool('isAdminLoggedIn', true);
                           
